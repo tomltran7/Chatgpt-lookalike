@@ -14,6 +14,7 @@ import {
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
 import { useState } from "react";
+import { extractExcelToMarkdown, extractCsvToMarkdown } from "@/lib/utils";
 import { useChat } from "@ai-sdk/react";
 import { Response } from "@/components/ai-elements/response";
 import {
@@ -141,7 +142,7 @@ export const ChatPanel = () => {
                             <DocumentCard
                               key={part.id || ""}
                               title={part.data.title}
-                              status={part.data.status}
+                              status={part.data.status as "processing" | "streaming" | "success" | "error"}
                               id={part.id || ""}
                             />
                           );
@@ -189,8 +190,35 @@ export const ChatPanel = () => {
             onChange={(e) => setInput(e.target.value)}
             value={input}
           />
-          <PromptInputToolbar>
-            <PromptInputTools></PromptInputTools>
+          <PromptInputToolbar
+            onFileSelect={async (file) => {
+              let content = '';
+              const fileName = file.name.toLowerCase();
+              try {
+                if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                  // Excel: read as ArrayBuffer
+                  const buffer = await file.arrayBuffer();
+                  content = extractExcelToMarkdown(buffer);
+                } else if (fileName.endsWith('.csv')) {
+                  // CSV: read as text
+                  const text = await file.text();
+                  content = extractCsvToMarkdown(text);
+                } else {
+                  // Fallback: plain text
+                  content = await file.text();
+                }
+              } catch (err) {
+                content = `Error extracting file content: ${String(err)}`;
+              }
+              sendMessage({
+                text: `Uploaded file: ${file.name}\n\n${content}`,
+                metadata: {
+                  documentId: openedDocumentId || undefined,
+                },
+              });
+            }}
+          >
+            <PromptInputTools />
             <PromptInputSubmit disabled={!input} status={status} />
           </PromptInputToolbar>
         </PromptInput>

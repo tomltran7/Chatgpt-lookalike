@@ -11,13 +11,13 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { ChatStatus } from "ai";
-import { Loader2Icon, SendIcon, SquareIcon, XIcon } from "lucide-react";
+import { Loader2Icon, SendIcon, SquareIcon, XIcon, PaperclipIcon } from "lucide-react";
+import { useRef, Children } from "react";
 import type {
   ComponentProps,
   HTMLAttributes,
   KeyboardEventHandler,
 } from "react";
-import { Children } from "react";
 
 export type PromptInputProps = HTMLAttributes<HTMLFormElement>;
 
@@ -84,17 +84,57 @@ export const PromptInputTextarea = ({
   );
 };
 
-export type PromptInputToolbarProps = HTMLAttributes<HTMLDivElement>;
+export type PromptInputToolbarProps = HTMLAttributes<HTMLDivElement> & {
+  onFileSelect?: (file: File) => void;
+};
 
 export const PromptInputToolbar = ({
   className,
+  onFileSelect,
+  children,
   ...props
-}: PromptInputToolbarProps) => (
-  <div
-    className={cn("flex items-center justify-between p-1", className)}
-    {...props}
-  />
-);
+}: PromptInputToolbarProps) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAttachmentClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onFileSelect) {
+      onFileSelect(file);
+    }
+    e.target.value = "";
+  };
+
+  return (
+    <div className={cn("flex items-center justify-between p-1", className)} {...props}>
+      <div className="flex items-center gap-1">
+        {children && Array.isArray(children) ? children.slice(0, -1) : null}
+      </div>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          aria-label="Attach file"
+          className="rounded-full p-2 hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/50 focus:outline-none"
+          onClick={handleAttachmentClick}
+          tabIndex={0}
+        >
+          <PaperclipIcon className="size-5 text-muted-foreground" />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.doc,.docx,.txt,.md,.rtf,.xls,.xlsx,.csv,.js,.ts,.tsx,.py,.java,.c,.cpp,.json,.html,.css,.xml,.yml,.yaml,.sh,.go,.rb,.php,.swift,.rs"
+          style={{ display: "none" }}
+          onChange={handleFileChange}
+        />
+        {children && Array.isArray(children) ? children.slice(-1) : children}
+      </div>
+    </div>
+  );
+};
 
 export type PromptInputToolsProps = HTMLAttributes<HTMLDivElement>;
 
