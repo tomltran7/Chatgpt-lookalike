@@ -146,19 +146,71 @@ export function DocumentPanel() {
         >
           {/* Header */}
           <div className="p-4 border-b border-[#3a3a3a] flex items-center justify-between gap-4">
-            <h2 className="text-lg font-medium text-[#e5e5e5] flex items-center gap-2">
-              {openedDocPart?.data.title || "Untitled"}
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#e5e5e5]/5 px-2 py-0.5 text-[11px] text-[#e5e5e5]/70">
-                <span className="relative inline-flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-[#e5e5e5]/40 opacity-75 animate-ping" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#e5e5e5]" />
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              <h2 className="text-lg font-medium text-[#e5e5e5] flex items-center gap-2 min-w-0 truncate">
+                {openedDocPart?.data.title || "Untitled"}
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#e5e5e5]/5 px-2 py-0.5 text-[11px] text-[#e5e5e5]/70">
+                  <span className="relative inline-flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-[#e5e5e5]/40 opacity-75 animate-ping" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#e5e5e5]" />
+                  </span>
+                  {openedDocPart?.data.status
+                    ? openedDocPart.data.status.charAt(0).toUpperCase() +
+                      openedDocPart.data.status.slice(1)
+                    : null}
                 </span>
-                {openedDocPart?.data.status
-                  ? openedDocPart.data.status.charAt(0).toUpperCase() +
-                    openedDocPart.data.status.slice(1)
-                  : null}
-              </span>
-            </h2>
+                {/* Version tracking controls */}
+                {versions.length > 1 && (
+                  <div className="flex items-center gap-2 ml-4">
+                    <label htmlFor="version-select" className="text-[#e5e5e5]/70 text-xs">
+                      Version:
+                    </label>
+                    <select
+                      id="version-select"
+                      className="bg-transparent border border-[#3a3a3a] text-[#e5e5e5] rounded px-2 py-1 text-xs"
+                      value={currentVersionIdx}
+                      onChange={e => setCurrentVersionIdx(Number(e.target.value))}
+                    >
+                      {versions.map((v, idx) => (
+                        <option key={v.timestamp} value={idx} className="bg-[#222] text-[#e5e5e5]">
+                          {v.label} - {new Date(v.timestamp).toLocaleString()}
+                        </option>
+                      ))}
+                    </select>
+                    {/* Restore button for non-current version */}
+                    {currentVersionIdx < versions.length - 1 && (
+                      <button
+                        className="px-2 py-1 border border-[#e5e5e5]/20 rounded text-[#e5e5e5]/70 hover:text-white hover:border-[#e5e5e5]/40 text-xs"
+                        onClick={() => {
+                          // Restore selected version as the latest version
+                          const restored = versions[currentVersionIdx];
+                          setVersions(prev => [...prev, {
+                            ...restored,
+                            timestamp: Date.now(),
+                            label: `v${prev.length + 1} (restored)`
+                          }]);
+                          setCurrentVersionIdx(versions.length); // new version is now current
+                        }}
+                      >
+                        Restore
+                      </button>
+                    )}
+                  </div>
+                )}
+                {/* Edit button in header */}
+                {!isEditing && versions.length > 0 && (
+                  <button
+                    className="ml-4 px-3 py-1 border border-[#e5e5e5]/20 rounded text-[#e5e5e5]/80 hover:text-white hover:border-[#e5e5e5]/40 text-xs"
+                    onClick={() => {
+                      setIsEditing(true);
+                      setEditContent(versions[currentVersionIdx].content || "");
+                    }}
+                  >
+                    Edit
+                  </button>
+                )}
+              </h2>
+            </div>
             <button
               type="button"
               onClick={() => setOpenedDocumentId(null)}
@@ -184,55 +236,17 @@ export function DocumentPanel() {
           </div>
 
           {/* Canvas/Editor */}
-          <div className="flex-1 min-h-0 p-8 overflow-auto">
-            <div className="max-w-2xl mx-auto">
-              {/* Version dropdown */}
-              {versions.length > 1 && (
-                <div className="mb-4 flex items-center gap-2">
-                  <label htmlFor="version-select" className="text-[#e5e5e5]/70 text-sm">
-                    Version:
-                  </label>
-                  <select
-                    id="version-select"
-                    className="bg-transparent border border-[#3a3a3a] text-[#e5e5e5] rounded px-2 py-1"
-                    value={currentVersionIdx}
-                    onChange={e => setCurrentVersionIdx(Number(e.target.value))}
-                  >
-                    {versions.map((v, idx) => (
-                      <option key={v.timestamp} value={idx} className="bg-[#222] text-[#e5e5e5]">
-                        {v.label} - {new Date(v.timestamp).toLocaleString()}
-                      </option>
-                    ))}
-                  </select>
-                  {/* Restore button for non-current version */}
-                  {currentVersionIdx < versions.length - 1 && (
-                    <button
-                      className="ml-2 px-2 py-1 border border-[#e5e5e5]/20 rounded text-[#e5e5e5]/70 hover:text-white hover:border-[#e5e5e5]/40 text-xs"
-                      onClick={() => {
-                        // Restore selected version as the latest version
-                        const restored = versions[currentVersionIdx];
-                        setVersions(prev => [...prev, {
-                          ...restored,
-                          timestamp: Date.now(),
-                          label: `v${prev.length + 1} (restored)`
-                        }]);
-                        setCurrentVersionIdx(versions.length); // new version is now current
-                      }}
-                    >
-                      Restore this version
-                    </button>
-                  )}
-                </div>
-              )}
-              {isEditing ? (
+          <div className="flex-1 flex flex-col min-h-0 max-h-full p-8 overflow-auto">
+            {isEditing ? (
+              <>
                 <section
                   aria-label="Document editing area"
                   className="flex flex-1 flex-col min-h-0 max-h-full"
                   style={{ height: '100%' }}
                 >
                   <textarea
-                    className="flex-1 w-full min-h-[200px] max-h-full min-h-0 bg-transparent border border-[#3a3a3a] text-[#e5e5e5] p-2 rounded overflow-y-auto"
-                    style={{ resize: 'vertical', height: '300px' }}
+                    className="flex-1 w-full max-h-full min-h-0 bg-transparent border border-[#3a3a3a] text-[#e5e5e5] p-2 rounded overflow-y-auto"
+                    style={{ resize: 'none' }}
                     value={editContent}
                     onChange={e => setEditContent(e.target.value)}
                   />
@@ -251,7 +265,9 @@ export function DocumentPanel() {
                     </button>
                   </div>
                 </section>
-              ) : (
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col min-h-0 max-h-full max-w-2xl mx-auto">
                 <section
                   ref={documentRef}
                   onMouseUp={handleTextSelection}
@@ -259,26 +275,13 @@ export function DocumentPanel() {
                   aria-label="Document content area"
                 >
                   {versions.length > 0 ? (
-                    <>
-                      <Response className="">{versions[currentVersionIdx].content}</Response>
-                      <div className="mt-4 flex justify-end">
-                        <button
-                          className="px-3 py-1 border border-[#e5e5e5]/20 rounded text-[#e5e5e5]/80 hover:text-white hover:border-[#e5e5e5]/40"
-                          onClick={() => {
-                            setIsEditing(true);
-                            setEditContent(versions[currentVersionIdx].content || "");
-                          }}
-                        >
-                          Edit
-                        </button>
-                      </div>
-                    </>
+                    <Response className="">{versions[currentVersionIdx].content}</Response>
                   ) : (
                     <p className="text-[#e5e5e5]/70">Waiting for content…</p>
                   )}
                 </section>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           <SelectionMenu

@@ -52,8 +52,8 @@ export const ChatPanel = () => {
   return (
     <div className="max-w-4xl mx-auto p-6 relative size-full h-screen min-h-0">
       <div className="flex flex-col h-full min-h-0">
-        <Conversation className="h-full">
-          <ConversationContent className="h-full">
+        <Conversation className="flex-1 min-h-0 flex flex-col">
+          <ConversationContent className="flex-1 min-h-0 overflow-y-auto h-full">
             {messages.length === 0 && status !== "submitted" && (
               <div className="min-h-full grid place-items-center py-12">
                 <div className="text-center max-w-md mx-auto">
