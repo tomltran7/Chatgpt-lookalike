@@ -50,8 +50,8 @@ export const ChatPanel = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 relative  size-full h-screen">
-      <div className="flex flex-col h-full">
+    <div className="max-w-4xl mx-auto p-6 relative size-full h-screen min-h-0">
+      <div className="flex flex-col h-full min-h-0">
         <Conversation className="h-full">
           <ConversationContent className="h-full">
             {messages.length === 0 && status !== "submitted" && (
