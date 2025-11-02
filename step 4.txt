@@ -1,0 +1,14 @@
+Update Type Definitions
+Add to app/api/chat/route.ts:
+
+type CreateVisualizationPart = {
+  status: string;
+  chartData: any[];
+  sql: string;
+  chartType: 'line' | 'bar' | 'table';
+};
+
+export type MyDataTypes = {
+  createDocument: CreateDocumentPart;
+  createVisualization: CreateVisualizationPart;
+};
