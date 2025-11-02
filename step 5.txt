@@ -1,0 +1,29 @@
+Update Chat Panel Component
+Update components/chat/chat-panel.tsx to handle visualizations:
+
+// Add import
+import VisualizationCard from "./visualization-card";
+
+// In your message rendering loop, add:
+{message.parts.map((part, i) => {
+  switch (part.type) {
+    case "text":
+      return (
+        <Response key={`${message.id}-${i}`}>
+          {part.text}
+        </Response>
+      );
+    case "data-createVisualization":
+      return (
+        <VisualizationCard
+          key={part.id || ""}
+          title={part.data.title || "Query Results"}
+          id={part.id || ""}
+          chartData={part.data.chartData}
+          chartType={part.data.chartType}
+          sql={part.data.sql}
+        />
+      );
+    // ... other cases
+  }
+})}
