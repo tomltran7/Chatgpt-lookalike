@@ -1,0 +1,93 @@
+app/api/chat/route.ts (Update existing file)
+Add this to your existing chat route to handle database queries:
+
+// Add this helper function at the top
+async function executeOracleQuery(query: string) {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/oracle`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query })
+  });
+  return await response.json();
+}
+
+// In your POST handler, add logic to detect database queries
+export async function POST(req: Request) {
+  // ... existing code ...
+  
+  const lastUserMessage = messages.slice().reverse().find(m => m.role === 'user');
+  const userText = lastUserMessage?.parts?.[0]?.text?.toLowerCase() || '';
+  
+  // Detect "Connect to CIW" keyword
+  if (userText.includes('connect to ciw')) {
+    const testConnection = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/oracle`);
+    const result = await testConnection.json();
+    
+    writer.write({
+      type: "text-start",
+      id: messageId,
+    });
+    writer.write({
+      type: "text-delta",
+      delta: result.success 
+        ? '✓ Connected to Claims Intake and Workflow (CIW) database. You can now ask questions about automation metrics, claims data, and more.'
+        : `Failed to connect: ${result.error}`,
+      id: messageId,
+    });
+    writer.write({
+      type: "text-end",
+      id: messageId,
+    });
+    return;
+  }
+  
+  // Detect data analysis queries
+  const dataKeywords = ['automation', 'metrics', 'claims', 'trend', 'show me', 'analyze'];
+  const isDataQuery = dataKeywords.some(kw => userText.includes(kw));
+  
+  if (isDataQuery) {
+    // Generate SQL using AI
+    const sqlPrompt = `Generate a SQL query for Oracle database based on this question: "${userText}". 
+    Available table: CIWPROD_DATA.CIW_DATA_INFINITYDATARECORD
+    Return only valid SQL, no explanation.`;
+    
+    // Call your AI model to generate SQL
+    const sqlResponse = await horizonChat([
+      { role: 'system', content: 'You are a SQL expert. Generate only valid Oracle SQL queries.' },
+      { role: 'user', content: sqlPrompt }
+    ]);
+    
+    const generatedSQL = sqlResponse.message.content;
+    
+    // Execute the query
+    const queryResult = await executeOracleQuery(generatedSQL);
+    
+    if (queryResult.success && queryResult.data.length > 0) {
+      // Create visualization data
+      writer.write({
+        type: "data-createVisualization",
+        id: messageId,
+        data: {
+          status: "success",
+          chartData: queryResult.data,
+          sql: generatedSQL,
+          chartType: detectChartType(queryResult.data)
+        }
+      });
+    }
+  }
+  
+  // ... rest of existing code ...
+}
+
+function detectChartType(data: any[]) {
+  if (!data.length) return 'table';
+  
+  const keys = Object.keys(data[0]);
+  const hasDateField = keys.some(k => /date|day|time/i.test(k));
+  const numericFields = keys.filter(k => typeof data[0][k] === 'number');
+  
+  if (hasDateField && numericFields.length > 0) return 'line';
+  if (numericFields.length >= 2) return 'bar';
+  return 'table';
+}
