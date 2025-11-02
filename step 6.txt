@@ -1,0 +1,41 @@
+Update Chat Route to Use Schema Context
+Update app/api/chat/route.ts:
+
+import { getDatabaseConfig, getSchemaContext } from '@/lib/database-metadata';
+
+export async function POST(req: Request) {
+  // ... existing code ...
+  
+  const isDataQuery = dataKeywords.some(kw => userText.includes(kw));
+  
+  if (isDataQuery) {
+    // Load database schema context
+    const dbConfig = await getDatabaseConfig('ora1');
+    if (!dbConfig) {
+      throw new Error('Database configuration not found');
+    }
+    
+    const schemaContext = getSchemaContext(dbConfig);
+    
+    // Generate SQL using AI with schema context
+    const sqlPrompt = `Generate a SQL query for Oracle database based on this question: "${userText}". 
+
+${schemaContext}
+
+IMPORTANT RULES:
+1. Use only the tables and columns listed above
+2. For date filtering, use TRUNC(PXCREATEDATETIME) 
+3. For automation metrics, group by BLOCKNAME and EXECUTIONMODE
+4. Always include appropriate WHERE clauses for date ranges
+5. Return only valid Oracle SQL, no explanation
+6. Do NOT use Oracle reserved words as column aliases (e.g., DATE, GROUP, USER)`;
+    
+    // Call your AI model to generate SQL
+    const sqlResponse = await horizonChat([
+      { role: 'system', content: 'You are a SQL expert for Oracle databases. Generate only valid Oracle SQL queries using the provided schema.' },
+      { role: 'user', content: sqlPrompt }
+    ]);
+    
+    // ... rest of the code ...
+  }
+}
