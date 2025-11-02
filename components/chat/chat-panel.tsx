@@ -194,15 +194,18 @@ export const ChatPanel = () => {
             onFileSelect={async (file) => {
               let content = '';
               const fileName = file.name.toLowerCase();
+              let extractedTable = undefined;
               try {
                 if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
                   // Excel: read as ArrayBuffer
                   const buffer = await file.arrayBuffer();
                   content = extractExcelToMarkdown(buffer);
+                  extractedTable = content;
                 } else if (fileName.endsWith('.csv')) {
                   // CSV: read as text
                   const text = await file.text();
                   content = extractCsvToMarkdown(text);
+                  extractedTable = content;
                 } else {
                   // Fallback: plain text
                   content = await file.text();
@@ -210,12 +213,23 @@ export const ChatPanel = () => {
               } catch (err) {
                 content = `Error extracting file content: ${String(err)}`;
               }
-              sendMessage({
-                text: `Uploaded file: ${file.name}\n\n${content}`,
-                metadata: {
-                  documentId: openedDocumentId || undefined,
-                },
-              });
+              // For Excel/CSV, suppress markdown in chat, send only a generic message and attach extractedTable in metadata
+              if (extractedTable) {
+                sendMessage({
+                  text: `File "${file.name}" uploaded and data extracted for analysis.`,
+                  metadata: {
+                    documentId: openedDocumentId || undefined,
+                    extractedTable,
+                  },
+                });
+              } else {
+                sendMessage({
+                  text: `Uploaded file: ${file.name}\n\n${content}`,
+                  metadata: {
+                    documentId: openedDocumentId || undefined,
+                  },
+                });
+              }
             }}
           >
             <PromptInputTools />

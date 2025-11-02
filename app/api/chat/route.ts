@@ -240,20 +240,30 @@ export async function POST(req: Request) {
 
         // For forecast or upload, always include the most recent extracted table from chat history
         let docUserMessages: MyUiMessage[] = [];
-        const markdownTableRegex = /\|(.+)\|\n\|([\s\-\|]+)\|([\s\S]*)/m;
-        // Find the most recent message (user or assistant) with a Markdown table
+        // 1. Prefer extractedTable from metadata if present
         let tableText: string | undefined = undefined;
         for (let i = messages.length - 1; i >= 0; i--) {
           const msg = messages[i];
-          if (msg.parts && Array.isArray(msg.parts)) {
-            for (const part of msg.parts) {
-              if (part.type === 'text' && typeof part.text === 'string' && markdownTableRegex.test(part.text)) {
-                tableText = part.text;
-                break;
+          if (msg.metadata && typeof msg.metadata.extractedTable === 'string' && msg.metadata.extractedTable.trim().length > 0) {
+            tableText = msg.metadata.extractedTable;
+            break;
+          }
+        }
+        // 2. Fallback: search for markdown table in message parts
+        if (!tableText) {
+          const markdownTableRegex = /\|(.+)\|\n\|([\s\-|]+)\|([\s\S]*)/m;
+          for (let i = messages.length - 1; i >= 0; i--) {
+            const msg = messages[i];
+            if (msg.parts && Array.isArray(msg.parts)) {
+              for (const part of msg.parts) {
+                if (part.type === 'text' && typeof part.text === 'string' && markdownTableRegex.test(part.text)) {
+                  tableText = part.text;
+                  break;
+                }
               }
             }
+            if (tableText) break;
           }
-          if (tableText) break;
         }
         if (tableText) {
           docUserMessages.push({
@@ -271,7 +281,7 @@ export async function POST(req: Request) {
           });
         }
         // Always include the user's latest request (unless it's already the table)
-        if (!tableText || (lastUserMessage && lastUserMessage.parts && !lastUserMessage.parts.some(part => part.type === 'text' && typeof part.text === 'string' && markdownTableRegex.test(part.text)))) {
+        if (!tableText || (lastUserMessage && lastUserMessage.parts && !lastUserMessage.parts.some(part => part.type === 'text' && typeof part.text === 'string' && tableText && lastUserMessage.parts.some(p => p.type === 'text' && p.text === tableText)))) {
           docUserMessages.push(
             lastUserMessage
               ? {
@@ -322,4 +332,4 @@ export type MyDataTypes = {
   createDocument: CreateDocumentPart;
 };
 
-export type MyUiMessage = UIMessage<{ documentId?: string }, MyDataTypes, any>;
+export type MyUiMessage = UIMessage<{ documentId?: string; extractedTable?: string; [key: string]: any }, MyDataTypes, any>;
