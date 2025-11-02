@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import oracledb from 'oracledb';
+import { getDatabaseConfig, resolveEnvVar } from '@/lib/database-metadata';
 
 // Initialize Oracle client (do this once at startup)
 let oracleInitialized = false;
@@ -15,7 +16,27 @@ if (!oracleInitialized) {
     console.error('Oracle client init error:', err);
   }
 }
+// Helper to get Oracle connection using metadata
+async function getOracleConnection() {
+  const config = await getDatabaseConfig('ora1');
+  if (!config) {
+    throw new Error('Database configuration not found');
+  }
 
+  const host = resolveEnvVar(config.host);
+  const port = resolveEnvVar(config.port);
+  const database = resolveEnvVar(config.database);
+  const user = resolveEnvVar(config.username);
+  const password = resolveEnvVar(config.password);
+  
+  const connectString = `${host}:${port}/${database}`;
+  
+  return await oracledb.getConnection({
+    user,
+    password,
+    connectString
+  });
+}
 // Helper to get Oracle connection
 async function getOracleConnection() {
   const connectString = `${process.env.ORACLE_HOST}:${process.env.ORACLE_PORT}/${process.env.ORACLE_DATABASE}`;
