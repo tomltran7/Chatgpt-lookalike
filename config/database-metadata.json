@@ -1,0 +1,73 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-11-02T00:00:00Z",
+  "databases": [
+    {
+      "id": "ora1",
+      "name": "Oracle - Claims Intake and Workflow",
+      "type": "oracle",
+      "host": "${ORACLE_HOST}",
+      "port": "${ORACLE_PORT}",
+      "username": "${ORACLE_USER}",
+      "password": "${ORACLE_PASSWORD}",
+      "database": "${ORACLE_DATABASE}",
+      "tables": [
+        {
+          "name": "CIWPROD_DATA.CIW_DATA_INFINITYDATARECORD",
+          "description": "Transaction data records for Infinity in CIW.",
+          "columns": [
+            { "name": "PXCOMMITDATETIME", "type": "DATE", "nullable": true, "description": "Commit timestamp" }, 
+            { "name": "PXSAVEDATETIME", "type": "DATE", "nullable": true, "description": "Save timestamp" }, 
+            { "name": "PXCREATEDATETIME", "type": "DATE", "nullable": true, "description": "Creation timestamp" }, 
+            { "name": "DCN", "type": "VARCHAR2", "nullable": false, "description": "Document Control Number" }, 
+            { "name": "ITEMCODE", "type": "VARCHAR2", "nullable": false, "description": "Item code identifier" }, 
+            { "name": "SEQUENCENUMBER", "type": "VARCHAR2", "nullable": false, "description": "Sequence number" }, 
+            { "name": "BLOCKNAME", "type": "VARCHAR2", "nullable": false, "description": "Processing block name (Header, Line, Service)" }, 
+            { "name": "DATA_JSON", "type": "CLOB", "nullable": true, "description": "JSON data payload" }, 
+            { "name": "BLOCKSTATUS", "type": "VARCHAR2", "nullable": true, "description": "Block processing status" }, 
+            { "name": "BLOCKSUBSTATUS", "type": "VARCHAR2", "nullable": true, "description": "Block sub-status" }, 
+            { "name": "CALLTYPE", "type": "VARCHAR2", "nullable": true, "description": "Type of API call" }, 
+            { "name": "CALLSTATUS", "type": "VARCHAR2", "nullable": true, "description": "Status of API call" }, 
+            { "name": "EXECUTIONMODE", "type": "VARCHAR2", "nullable": true, "description": "Execution mode (Full Automation, Partial Automation, etc.)" }, 
+            { "name": "FAILUREREASON", "type": "VARCHAR2", "nullable": true, "description": "Reason for failure" }, 
+            { "name": "FAILUREMODULE", "type": "VARCHAR2", "nullable": true, "description": "Module where failure occurred" }, 
+            { "name": "ELIGIBLE_START", "type": "TIMESTAMP(6)", "nullable": true, "description": "Eligibility check start time" }, 
+            { "name": "ELIGIBLE_END", "type": "TIMESTAMP(6)", "nullable": true, "description": "Eligibility check end time" }, 
+            { "name": "PROCESSING_START", "type": "TIMESTAMP(6)", "nullable": true, "description": "Processing start time" }, 
+            { "name": "PROCESSING_END", "type": "TIMESTAMP(6)", "nullable": true, "description": "Processing end time" }, 
+            { "name": "SENT_START", "type": "TIMESTAMP(6)", "nullable": true, "description": "Sent to downstream start time" }, 
+            { "name": "SENT_END", "type": "TIMESTAMP(6)", "nullable": true, "description": "Sent to downstream end time" }, 
+            { "name": "RECEIVED_START", "type": "TIMESTAMP(6)", "nullable": true, "description": "Response received start time" }, 
+            { "name": "RECEIVED_END", "type": "TIMESTAMP(6)", "nullable": true, "description": "Response received end time" }, 
+            { "name": "APPLIED_START", "type": "TIMESTAMP(6)", "nullable": true, "description": "Applied to system start time" }, 
+            { "name": "APPLIED_END", "type": "TIMESTAMP(6)", "nullable": true, "description": "Applied to system end time" }, 
+            { "name": "RETRYCOUNT", "type": "VARCHAR2", "nullable": true, "description": "Number of retry attempts" }
+          ]
+        }
+      ],
+      "commonQueries": [
+        {
+          "name": "Automation Metrics by Block",
+          "description": "Get automation metrics grouped by block name",
+          "template": "SELECT BLOCKNAME, EXECUTIONMODE, COUNT(*) as TOTAL_CLAIMS FROM CIWPROD_DATA.CIW_DATA_INFINITYDATARECORD WHERE TRUNC(PXCREATEDATETIME) BETWEEN TO_DATE('{startDate}', 'YYYY-MM-DD') AND TO_DATE('{endDate}', 'YYYY-MM-DD') GROUP BY BLOCKNAME, EXECUTIONMODE ORDER BY BLOCKNAME, EXECUTIONMODE"
+        },
+        {
+          "name": "Daily Claims Volume",
+          "description": "Get daily claims processing volume",
+          "template": "SELECT TRUNC(PXCREATEDATETIME) as PROCESS_DATE, COUNT(*) as TOTAL_CLAIMS FROM CIWPROD_DATA.CIW_DATA_INFINITYDATARECORD WHERE TRUNC(PXCREATEDATETIME) BETWEEN TO_DATE('{startDate}', 'YYYY-MM-DD') AND TO_DATE('{endDate}', 'YYYY-MM-DD') GROUP BY TRUNC(PXCREATEDATETIME) ORDER BY PROCESS_DATE"
+        },
+        {
+          "name": "Automation Type Distribution",
+          "description": "Distribution of automation types (Full, Partial, None)",
+          "template": "SELECT EXECUTIONMODE as AUTOMATION_TYPE, COUNT(*) as COUNT FROM CIWPROD_DATA.CIW_DATA_INFINITYDATARECORD WHERE TRUNC(PXCREATEDATETIME) BETWEEN TO_DATE('{startDate}', 'YYYY-MM-DD') AND TO_DATE('{endDate}', 'YYYY-MM-DD') GROUP BY EXECUTIONMODE"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "refreshInterval": "1 hour",
+    "autoRefresh": true,
+    "cacheEnabled": true,
+    "cacheTTL": 300
+  }
+}
